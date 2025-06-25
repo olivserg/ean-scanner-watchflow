@@ -2,66 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Scan Watch EAN</title>
-  <script type="module" src="https://unpkg.com/@zxing/browser@latest"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    video {
-      width: 100%;
-      max-width: 500px;
-      border: 2px solid #333;
-      margin-top: 10px;
-    }
-    .output {
-      margin-top: 20px;
-      font-weight: bold;
-      font-size: 1.2em;
-    }
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #reader { width: 100%; max-width: 400px; margin: auto; border: 1px solid #ccc; }
+    #fileInput { margin-top: 10px; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; }
   </style>
 </head>
 <body>
   <h1>Scan Watch EAN</h1>
-  <button id="start-scan">📷 Scanner via caméra</button>
-  <input type="file" id="upload" accept="image/*" />
-  <br />
-  <video id="video" autoplay></video>
-  <div class="output" id="result">Waiting for scan...</div>
+
+  <div>
+    <button onclick="startCamera()">📷 Scanner via caméra</button>
+    <input type="file" accept="image/*" id="fileInput" />
+  </div>
+
+  <div id="reader" style="margin-top: 20px;"></div>
+
+  <p id="result" style="font-size: 18px; font-weight: bold;"></p>
 
   <script>
-    import { BrowserMultiFormatReader } from 'https://unpkg.com/@zxing/browser@latest';
-    const codeReader = new BrowserMultiFormatReader();
+    const resultElement = document.getElementById("result");
+    const html5QrCode = new Html5Qrcode("reader");
 
-    const resultElement = document.getElementById('result');
-    const videoElement = document.getElementById('video');
-    const uploadInput = document.getElementById('upload');
-
-    document.getElementById('start-scan').addEventListener('click', () => {
-      codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-        if (result) {
-          resultElement.textContent = `✅ Code détecté: ${result.getText()}`;
-          // ici on peut appeler WatchFlow automatiquement
-        }
-        if (err && !(err instanceof ZXing.NotFoundException)) {
-          console.error(err);
-        }
-      });
-    });
-
-    uploadInput.addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      const img = await createImageBitmap(file);
-      const result = await codeReader.decodeFromImageElement(img).catch(() => null);
-      if (result) {
-        resultElement.textContent = `✅ Code détecté: ${result.getText()}`;
-      } else {
-        resultElement.textContent = '❌ Aucun code détecté sur l’image';
+    async function startCamera() {
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            resultElement.innerText = `✅ EAN détecté : ${decodedText}`;
+            html5QrCode.stop();
+          },
+          (error) => { console.warn(error); }
+        );
+      } catch (err) {
+        resultElement.innerText = `❌ Erreur : ${err}`;
       }
+    }
+
+    document.getElementById("fileInput").addEventListener("change", (e) => {
+      if (e.target.files.length === 0) return;
+      html5QrCode.scanFile(e.target.files[0], true)
+        .then((decodedText) => {
+          resultElement.innerText = `✅ EAN détecté : ${decodedText}`;
+        })
+        .catch(err => {
+          resultElement.innerText = `❌ Scan échoué : ${err}`;
+        });
     });
   </script>
 </body>
