@@ -3,66 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scan Watch EAN</title>
-  <script type="module" src="https://unpkg.com/@zxing/browser@latest"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    video {
-      width: 100%;
-      max-width: 500px;
-      border: 2px solid #333;
-      margin-top: 10px;
-    }
-    .output {
-      margin-top: 20px;
-      font-weight: bold;
-      font-size: 1.2em;
-    }
-  </style>
+  <title>WatchFlow - Scan EAN</title>
 </head>
 <body>
-  <h1>Scan Watch EAN</h1>
-  <button id="start-scan">📷 Scanner via caméra</button>
-  <input type="file" id="upload" accept="image/*" />
-  <br />
-  <video id="video" autoplay></video>
-  <div class="output" id="result">Waiting for scan...</div>
+  <h1>Scan EAN Watch</h1>
+  <video id="video" width="100%" autoplay></video>
+  <p id="result">Scanne un code EAN pour voir les infos produit</p>
 
+  <script src="https://unpkg.com/@zxing/browser@latest"></script>
   <script>
-    import { BrowserMultiFormatReader } from 'https://unpkg.com/@zxing/browser@latest';
-    const codeReader = new BrowserMultiFormatReader();
-
-    const resultElement = document.getElementById('result');
+    const codeReader = new ZXing.BrowserBarcodeReader();
     const videoElement = document.getElementById('video');
-    const uploadInput = document.getElementById('upload');
+    const resultElement = document.getElementById('result');
 
-    document.getElementById('start-scan').addEventListener('click', () => {
-      codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-        if (result) {
-          resultElement.textContent = `✅ Code détecté: ${result.getText()}`;
-          // ici on peut appeler WatchFlow automatiquement
-        }
-        if (err && !(err instanceof ZXing.NotFoundException)) {
-          console.error(err);
-        }
-      });
-    });
-
-    uploadInput.addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      const img = await createImageBitmap(file);
-      const result = await codeReader.decodeFromImageElement(img).catch(() => null);
+    codeReader.decodeFromVideoDevice(undefined, videoElement, (result, err) => {
       if (result) {
-        resultElement.textContent = `✅ Code détecté: ${result.getText()}`;
-      } else {
-        resultElement.textContent = '❌ Aucun code détecté sur l’image';
+        const ean = result.getText();
+        const data = eanMapping[ean];
+        if (data) {
+          resultElement.innerText = `Modèle: ${data.model}\nRéférence: ${data.reference}\nPrix: ${data.price}`;
+          // Tu peux ici appeler l'API WatchFlow avec fetch()
+        } else {
+          resultElement.innerText = `Code EAN inconnu: ${ean}`;
+        }
       }
     });
   </script>
+  <script src="ean-mapping.js"></script>
 </body>
 </html>
