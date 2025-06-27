@@ -1,34 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WatchFlow - Scan EAN</title>
+  <title>Scan EAN WatchFlow</title>
 </head>
 <body>
-  <h1>Scan EAN Watch</h1>
-  <video id="video" width="100%" autoplay></video>
-  <p id="result">Scanne un code EAN pour voir les infos produit</p>
+  <h1>Scanner un code EAN</h1>
+  <p>Autorise l'accès à la caméra, puis scanne un code-barres EAN pour afficher les infos du modèle.</p>
+
+  <video id="preview" width="300" height="200" style="border: 1px solid black;"></video>
+  <p id="result" style="margin-top: 1em; font-weight: bold;"></p>
 
   <script src="https://unpkg.com/@zxing/browser@latest"></script>
-  <script>
-    const codeReader = new ZXing.BrowserBarcodeReader();
-    const videoElement = document.getElementById('video');
+  <script type="module">
+    import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.0.10/+esm";
+
+    const videoElement = document.getElementById('preview');
     const resultElement = document.getElementById('result');
 
-    codeReader.decodeFromVideoDevice(undefined, videoElement, (result, err) => {
-      if (result) {
-        const ean = result.getText();
-        const data = eanMapping[ean];
-        if (data) {
-          resultElement.innerText = `Modèle: ${data.model}\nRéférence: ${data.reference}\nPrix: ${data.price}`;
-          // Tu peux ici appeler l'API WatchFlow avec fetch()
-        } else {
-          resultElement.innerText = `Code EAN inconnu: ${ean}`;
-        }
+    const reader = new BrowserMultiFormatReader();
+
+    try {
+      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      if (devices.length === 0) {
+        resultElement.textContent = "Aucune caméra trouvée.";
+        throw new Error("Pas de caméra disponible.");
       }
-    });
+
+      const selectedDeviceId = devices[0].deviceId;
+
+      reader.decodeFromVideoDevice(selectedDeviceId, videoElement, async (result, err) => {
+        if (result) {
+          const ean = result.getText();
+          resultElement.textContent = `EAN détecté : ${ean}`;
+
+          try {
+            const { default: mapping } = await import('./ean-mapping.js');
+            const model = mapping[ean];
+            if (model) {
+              resultElement.textContent += `\nModèle : ${model.name}\nRéférence : ${model.reference}`;
+            } else {
+              resultElement.textContent += `\nModèle non trouvé dans le mapping.`;
+            }
+          } catch (e) {
+            resultElement.textContent += `\nErreur lors du chargement du mapping : ${e.message}`;
+          }
+
+          // Pour éviter de scanner plusieurs fois :
+          reader.reset();
+        }
+      });
+    } catch (error) {
+      resultElement.textContent = `Erreur : ${error.message}`;
+    }
   </script>
-  <script src="ean-mapping.js"></script>
 </body>
 </html>
