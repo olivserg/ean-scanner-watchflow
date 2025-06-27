@@ -10,50 +10,69 @@
   <p>Autorise l'accès à la caméra, puis scanne un code-barres EAN pour afficher les infos du modèle.</p>
 
   <video id="preview" width="300" height="200" style="border: 1px solid black;"></video>
-  <p id="result" style="margin-top: 1em; font-weight: bold;"></p>
+  <div id="result" style="margin-top: 1em; font-weight: bold;"></div>
 
-  <script src="https://unpkg.com/@zxing/browser@latest"></script>
   <script type="module">
     import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.0.10/+esm";
+    import eanMapping from './ean-mapping.js';
 
     const videoElement = document.getElementById('preview');
     const resultElement = document.getElementById('result');
-
     const reader = new BrowserMultiFormatReader();
 
-    try {
+    async function startScanner() {
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
       if (devices.length === 0) {
         resultElement.textContent = "Aucune caméra trouvée.";
-        throw new Error("Pas de caméra disponible.");
+        return;
       }
 
       const selectedDeviceId = devices[0].deviceId;
-
-      reader.decodeFromVideoDevice(selectedDeviceId, videoElement, async (result, err) => {
+      reader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
         if (result) {
           const ean = result.getText();
-          resultElement.textContent = `EAN détecté : ${ean}`;
+          const data = eanMapping[ean];
 
-          try {
-            const { default: mapping } = await import('./ean-mapping.js');
-            const model = mapping[ean];
-            if (model) {
-              resultElement.textContent += `\nModèle : ${model.name}\nRéférence : ${model.reference}`;
-            } else {
-              resultElement.textContent += `\nModèle non trouvé dans le mapping.`;
-            }
-          } catch (e) {
-            resultElement.textContent += `\nErreur lors du chargement du mapping : ${e.message}`;
+          if (!data) {
+            resultElement.innerHTML = `<p style="color:red;">❌ Code inconnu : ${ean}</p>`;
+            return;
           }
 
-          // Pour éviter de scanner plusieurs fois :
-          reader.reset();
+          const payload = {
+            ean,
+            model: data.reference,
+            price: data.price || null,
+            currency: data.currency || "CHF",
+            sold_at: new Date().toISOString(),
+            location: "Retail Store X"
+          };
+
+          fetch("https://ton-api-watchflow.com/sales", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          })
+          .then(res => {
+            if (res.ok) {
+              resultElement.innerHTML = `
+                <h2>${data.reference}</h2>
+                <p><strong>Collection :</strong> ${data.collection}</p>
+                <p>${data.description || ''}</p>
+                <p style="color:green;">✅ Vente enregistrée</p>
+              `;
+            } else {
+              resultElement.innerHTML = `<p style="color:red;">❌ Erreur lors de l'envoi</p>`;
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            resultElement.innerHTML = `<p style="color:red;">❌ Erreur réseau</p>`;
+          });
         }
       });
-    } catch (error) {
-      resultElement.textContent = `Erreur : ${error.message}`;
     }
+
+    startScanner();
   </script>
 </body>
 </html>
