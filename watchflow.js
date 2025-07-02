@@ -1,14 +1,7 @@
-function sendToWatchFlow(ean) {
-  const data = eanData[ean];
-  if (!data) {
-    document.getElementById("result").textContent = "Code inconnu : " + ean;
-    return;
-  }
-  const payload = {import eanMapping from './ean-mapping.js';
+import eanMapping from './ean-mapping.js';
 
 function sendToWatchFlow(ean) {
   const data = eanMapping[ean];
-
   const resultEl = document.getElementById("result");
 
   if (!data) {
@@ -30,25 +23,25 @@ function sendToWatchFlow(ean) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
-  .then(response => {
-    if (response.ok) {
-      resultEl.innerHTML = `
-        <h2>${data.reference}</h2>
-        <p><strong>Collection :</strong> ${data.collection}</p>
-        <p>${data.description || ''}</p>
-        <p style="color:green;">✅ Vente enregistrée</p>
-      `;
-    } else {
-      resultEl.innerHTML = `<p style="color:red;">❌ Erreur lors de l'envoi</p>`;
-    }
-  })
-  .catch(error => {
-    console.error(error);
-    resultEl.innerHTML = `<p style="color:red;">❌ Erreur réseau</p>`;
-  });
+    .then(response => {
+      if (response.ok) {
+        resultEl.innerHTML = `
+          <h2>${data.reference}</h2>
+          <p><strong>Collection :</strong> ${data.collection}</p>
+          <p>${data.description || ''}</p>
+          <p style="color:green;">✅ Vente enregistrée</p>
+        `;
+      } else {
+        resultEl.innerHTML = `<p style="color:red;">❌ Erreur lors de l'envoi</p>`;
+      }
+    })
+    .catch(error => {
+      console.error(error);
+      resultEl.innerHTML = `<p style="color:red;">❌ Erreur réseau</p>`;
+    });
 }
 
-// Activation du scanner avec Instascan
+// Scanner avec Instascan
 let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
 scanner.addListener('scan', function (ean) {
   sendToWatchFlow(ean);
