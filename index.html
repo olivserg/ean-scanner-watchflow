@@ -4,45 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scan EAN WatchFlow</title>
-  <meta name="permissions-policy" content="camera=(self)" />
 </head>
 <body>
   <h1>Scanner un code EAN</h1>
-  <p>Autorise l'accès à la caméra, puis scanne un code-barres EAN pour afficher les infos du modèle.</p>
+  <p>Autorise l'accès à la caméra, puis scanne un code-barres EAN pour enregistrer une vente.</p>
 
   <video id="preview" width="300" height="200" style="border: 1px solid black;"></video>
   <div id="result" style="margin-top: 1em; font-weight: bold;"></div>
 
   <script type="module">
     import { BrowserMultiFormatReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.0.10/+esm";
-
-    const eanMapping = {
-      "7640428084300": {
-        reference: "10110 357GN NBG",
-        collection: "Chronorally Automatic",
-        description: "Cadran vert vibrant, couronne surdimensionnée, boîte en titane, fond transparent inspiré d’une jante"
-      },
-      "7640428084317": {
-        reference: "10110 3BUO BUO",
-        collection: "Chronorally Automatic",
-        description: "Boîte en titane, fond transparent inspiré d’une jante, cadran bleu avec détails orange"
-      },
-      "7640428084324": {
-        reference: "10110 3NRN NRO",
-        collection: "Chronorally Automatic",
-        description: "Boîte en titane, fond transparent inspiré d’une jante, cadran noir avec détails rouges"
-      },
-      "7640428084331": {
-        reference: "10110 357GN NBG",
-        collection: "Chronorally Automatic",
-        description: "Cadran vert vibrant, couronne surdimensionnée, boîte en titane, fond transparent inspiré d’une jante"
-      },
-      "7640428084348": {
-        reference: "10110 3NRCA NRO",
-        collection: "Chronorally Automatic",
-        description: "Boîte en titane avec traitement noir, bracelet caoutchouc noir, fond transparent en forme de jante"
-      }
-    };
+    import eanMapping from './ean-mapping.js';
 
     const videoElement = document.getElementById('preview');
     const resultElement = document.getElementById('result');
@@ -56,8 +28,7 @@
       }
 
       const selectedDeviceId = devices[0].deviceId;
-
-      reader.decodeFromVideoDevice(selectedDeviceId, videoElement, async (result, err) => {
+      reader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
         if (result) {
           const ean = result.getText();
           const data = eanMapping[ean];
@@ -76,13 +47,12 @@
             location: "Retail Store X"
           };
 
-          try {
-            const res = await fetch("https://ton-api-watchflow.com/sales", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            });
-
+          fetch("https://ton-api-watchflow.com/sales", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          })
+          .then(res => {
             if (res.ok) {
               resultElement.innerHTML = `
                 <h2>${data.reference}</h2>
@@ -93,10 +63,11 @@
             } else {
               resultElement.innerHTML = `<p style="color:red;">❌ Erreur lors de l'envoi</p>`;
             }
-          } catch (error) {
-            console.error(error);
+          })
+          .catch(err => {
+            console.error(err);
             resultElement.innerHTML = `<p style="color:red;">❌ Erreur réseau</p>`;
-          }
+          });
         }
       });
     }
