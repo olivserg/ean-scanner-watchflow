@@ -1,4 +1,18 @@
 const eanMapping = {
+  "7611234567890": {
+    reference: "EDOX Hydro-Sub",
+    collection: "Hydro-Sub",
+    description: "Plongée extrême avec valve hélium",
+    price: 1290,
+    currency: "CHF"
+  },
+  "7610987654321": {
+    reference: "EDOX SkyDiver",
+    collection: "SkyDiver",
+    description: "Inspirée des forces spéciales",
+    price: 990,
+    currency: "CHF"
+  },
   "7640428084300": {
     reference: "10110 357GN NBG",
     collection: "Chronorally Automatic",
@@ -25,3 +39,5 @@ const eanMapping = {
     description: "Boîte en titane avec traitement noir, bracelet caoutchouc noir, fond transparent en forme de jante"
   }
 };
+
+export default eanMapping;
